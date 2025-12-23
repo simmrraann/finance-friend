@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth, Character } from '@/contexts/AuthContext';
 import {
   TrendingUp,
   Moon,
@@ -14,8 +16,8 @@ import {
   LogOut,
   ArrowUpRight,
   ArrowDownRight,
+  Sparkles,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   BarChart,
   Bar,
@@ -32,11 +34,38 @@ import {
   Legend,
 } from 'recharts';
 
+type StatsPeriod = 'weekly' | 'monthly' | 'yearly';
+type ChartPeriod = 'weekly' | 'monthly' | 'yearly';
+
+const characterEmoji: Record<NonNullable<Character>, string> = {
+  spark: '⚡',
+  zen: '🧘',
+  sage: '🦉',
+};
+
+const characterInsights: Record<NonNullable<Character>, { analysis: string }> = {
+  spark: {
+    analysis: "You're doing great! 🔥 Your spending is on track this week. Keep pushing forward — your financial discipline is paying off! Consider allocating more to your investments while you're on a roll!",
+  },
+  zen: {
+    analysis: "Take a breath and look at your progress 🌿 Your balance is growing steadily. Remember, every small step counts. Your food expenses could use a gentle review — maybe try meal prepping?",
+  },
+  sage: {
+    analysis: "Let's analyze your patterns 📊 Your income exceeds expenses by 12%. Entertainment spending increased 15% this week. Consider setting aside the difference for your emergency fund.",
+  },
+};
+
 export default function Statistics() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { transactions, categories, getTotalIncome, getTotalExpenses, getTotalInvestments } = useFinance();
+
+  const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>('weekly');
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('weekly');
+
+  const character = user?.character || 'zen';
+  const insight = characterInsights[character];
 
   const navItems = [
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', path: '/dashboard' },
@@ -56,10 +85,9 @@ export default function Statistics() {
   const pieData = Object.entries(categorySpending).map(([name, value]) => ({
     name,
     value,
-    fill: categories.find(c => c.name === name)?.color || 'hsl(var(--primary))',
   }));
 
-  // Weekly data (mock)
+  // Weekly data
   const weeklyData = [
     { day: 'Mon', income: 400, expenses: 120 },
     { day: 'Tue', income: 0, expenses: 80 },
@@ -70,7 +98,33 @@ export default function Statistics() {
     { day: 'Sun', income: 0, expenses: 50 },
   ];
 
-  // Monthly trend (mock)
+  // Monthly data
+  const monthlyData = [
+    { day: 'Week 1', income: 1400, expenses: 450 },
+    { day: 'Week 2', income: 1200, expenses: 380 },
+    { day: 'Week 3', income: 800, expenses: 520 },
+    { day: 'Week 4', income: 1500, expenses: 410 },
+  ];
+
+  // Yearly data
+  const yearlyData = [
+    { day: 'Jan', income: 5000, expenses: 2100 },
+    { day: 'Feb', income: 4800, expenses: 1900 },
+    { day: 'Mar', income: 5200, expenses: 2300 },
+    { day: 'Apr', income: 4600, expenses: 2000 },
+    { day: 'May', income: 5100, expenses: 2200 },
+    { day: 'Jun', income: 5500, expenses: 2400 },
+  ];
+
+  const getChartData = () => {
+    switch (chartPeriod) {
+      case 'monthly': return monthlyData;
+      case 'yearly': return yearlyData;
+      default: return weeklyData;
+    }
+  };
+
+  // Monthly trend
   const monthlyTrend = [
     { month: 'Jul', balance: 2500 },
     { month: 'Aug', balance: 3200 },
@@ -81,7 +135,15 @@ export default function Statistics() {
     { month: 'Jan', balance: 5000 },
   ];
 
-  const COLORS = ['hsl(158, 64%, 40%)', 'hsl(12, 80%, 62%)', 'hsl(200, 70%, 50%)', 'hsl(270, 60%, 55%)', 'hsl(38, 92%, 50%)'];
+  const COLORS = ['hsl(217, 91%, 50%)', 'hsl(199, 89%, 48%)', 'hsl(186, 80%, 45%)', 'hsl(250, 60%, 55%)', 'hsl(38, 92%, 50%)'];
+
+  const getPeriodLabel = () => {
+    switch (statsPeriod) {
+      case 'monthly': return 'This Month';
+      case 'yearly': return 'This Year';
+      default: return 'This Week';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,9 +214,28 @@ export default function Statistics() {
       <main className="lg:ml-64 pt-20 lg:pt-8 pb-24 lg:pb-8 px-4 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="text-3xl font-display font-bold mb-2">Statistics</h1>
             <p className="text-muted-foreground">Visualize your financial journey</p>
+          </div>
+
+          {/* Top-Level Period Toggle */}
+          <div className="mb-6">
+            <div className="inline-flex bg-secondary rounded-xl p-1">
+              {(['weekly', 'monthly', 'yearly'] as StatsPeriod[]).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setStatsPeriod(period)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                    statsPeriod === period
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {period} Statistics
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Summary Cards */}
@@ -164,6 +245,7 @@ export default function Statistics() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Income</p>
                   <p className="text-2xl font-display font-bold text-success">${getTotalIncome().toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
                   <ArrowUpRight className="w-5 h-5 text-success" />
@@ -176,6 +258,7 @@ export default function Statistics() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Expenses</p>
                   <p className="text-2xl font-display font-bold text-destructive">${getTotalExpenses().toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
                   <ArrowDownRight className="w-5 h-5 text-destructive" />
@@ -187,10 +270,11 @@ export default function Statistics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Investments</p>
-                  <p className="text-2xl font-display font-bold text-chart-3">${getTotalInvestments().toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-primary">${getTotalInvestments().toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-chart-3/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-chart-3" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-primary" />
                 </div>
               </div>
             </Card>
@@ -198,15 +282,31 @@ export default function Statistics() {
 
           {/* Charts Grid */}
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* Weekly Overview */}
+            {/* Income vs Expenses Overview */}
             <Card>
-              <CardHeader>
-                <CardTitle>Weekly Overview</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Income vs Expenses</CardTitle>
+                {/* Chart-level toggle */}
+                <div className="inline-flex bg-secondary rounded-lg p-0.5">
+                  {(['weekly', 'monthly', 'yearly'] as ChartPeriod[]).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setChartPeriod(period)}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${
+                        chartPeriod === period
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {period}
+                    </button>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyData}>
+                    <BarChart data={getChartData()}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
                       <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -218,7 +318,7 @@ export default function Statistics() {
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="income" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="income" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="expenses" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -259,6 +359,34 @@ export default function Statistics() {
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Financial Insights */}
+            <Card className="lg:col-span-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <div className="text-3xl animate-float">{characterEmoji[character]}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">Financial Insights</CardTitle>
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">AI-powered analysis from your companion</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground leading-relaxed">{insight.analysis}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
+                    Income on track
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                    Savings improved
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
+                    Food spending up
+                  </span>
                 </div>
               </CardContent>
             </Card>

@@ -22,6 +22,7 @@ import {
   Settings,
   LogOut,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -32,18 +33,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const characterMessages: Record<NonNullable<Character>, { greeting: string; tip: string }> = {
+const characterMessages: Record<NonNullable<Character>, { greeting: string; tip: string; weeklyInsight: string }> = {
   spark: {
-    greeting: "You're doing AMAZING! 🔥",
+    greeting: "You're on FIRE! 🔥",
     tip: "Keep up the momentum! Every dollar saved is a step closer to your dreams!",
+    weeklyInsight: "Your spending is 15% lower than last week — incredible progress! You're crushing your food budget and your investments are growing. Keep this energy going!",
   },
   zen: {
     greeting: "Welcome back, friend 🌿",
     tip: "Remember, financial wellness is a journey, not a destination. Take it one day at a time.",
+    weeklyInsight: "This week has been balanced. Your expenses are steady, and you've maintained a healthy savings rate. Consider reviewing your subscriptions for potential savings.",
   },
   sage: {
     greeting: "Good to see you 📊",
     tip: "Based on your patterns, consider reviewing your entertainment spending this week.",
+    weeklyInsight: "Analysis shows income up 8% vs last week. Top spending: Food & Dining (32%), Shopping (24%). Recommendation: Set a $50 weekly cap on entertainment.",
   },
 };
 
@@ -175,7 +179,7 @@ export default function Dashboard() {
       <main className="lg:ml-64 pt-20 lg:pt-8 pb-24 lg:pb-8 px-4 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Welcome Section */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="text-3xl font-display font-bold mb-2">
               Hi, {user?.name?.split(' ')[0] || 'there'}! 👋
             </h1>
@@ -183,7 +187,7 @@ export default function Dashboard() {
           </div>
 
           {/* Character Companion Card */}
-          <Card className="mb-8 overflow-hidden">
+          <Card className="mb-6 overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
             <div className="flex items-start gap-4 p-6">
               <div className="text-4xl animate-float">{characterEmoji[character]}</div>
               <div className="flex-1">
@@ -194,7 +198,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Balance</span>
@@ -235,14 +239,31 @@ export default function Dashboard() {
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Investments</span>
-                <div className="w-8 h-8 rounded-lg bg-chart-3/10 flex items-center justify-center">
-                  <PiggyBank className="w-4 h-4 text-chart-3" />
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <PiggyBank className="w-4 h-4 text-primary" />
                 </div>
               </div>
               <p className="text-2xl font-display font-bold">${getTotalInvestments().toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">Total invested</p>
             </Card>
           </div>
+
+          {/* AI Weekly Summary */}
+          <Card className="mb-6 border-primary/20">
+            <CardHeader className="flex flex-row items-center gap-3 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Weekly AI Summary</CardTitle>
+                <p className="text-xs text-muted-foreground">Powered by your companion</p>
+              </div>
+              <div className="ml-auto text-2xl">{characterEmoji[character]}</div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-foreground leading-relaxed">{message.weeklyInsight}</p>
+            </CardContent>
+          </Card>
 
           {/* Recent Transactions */}
           <Card>
@@ -273,7 +294,7 @@ export default function Dashboard() {
                           ? 'text-success' 
                           : transaction.type === 'expense' 
                             ? 'text-destructive' 
-                            : 'text-chart-3'
+                            : 'text-primary'
                       }`}>
                         {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
                       </span>

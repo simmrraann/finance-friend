@@ -33,18 +33,18 @@ interface FinanceContextType {
 }
 
 const defaultCategories: Category[] = [
-  { id: '1', name: 'Salary', type: 'income', icon: '💼', color: 'hsl(158, 64%, 40%)' },
-  { id: '2', name: 'Freelance', type: 'income', icon: '💻', color: 'hsl(200, 70%, 50%)' },
-  { id: '3', name: 'Gifts', type: 'income', icon: '🎁', color: 'hsl(270, 60%, 55%)' },
-  { id: '4', name: 'Food & Dining', type: 'expense', icon: '🍔', color: 'hsl(12, 80%, 62%)' },
-  { id: '5', name: 'Shopping', type: 'expense', icon: '🛍️', color: 'hsl(280, 70%, 55%)' },
+  { id: '1', name: 'Salary', type: 'income', icon: '💼', color: 'hsl(217, 91%, 50%)' },
+  { id: '2', name: 'Freelance', type: 'income', icon: '💻', color: 'hsl(199, 89%, 48%)' },
+  { id: '3', name: 'Gifts', type: 'income', icon: '🎁', color: 'hsl(186, 80%, 45%)' },
+  { id: '4', name: 'Food & Dining', type: 'expense', icon: '🍔', color: 'hsl(0, 72%, 51%)' },
+  { id: '5', name: 'Shopping', type: 'expense', icon: '🛍️', color: 'hsl(250, 60%, 55%)' },
   { id: '6', name: 'Transport', type: 'expense', icon: '🚗', color: 'hsl(38, 92%, 50%)' },
-  { id: '7', name: 'Entertainment', type: 'expense', icon: '🎬', color: 'hsl(340, 70%, 55%)' },
-  { id: '8', name: 'Bills', type: 'expense', icon: '📄', color: 'hsl(220, 60%, 50%)' },
-  { id: '9', name: 'Health', type: 'expense', icon: '💊', color: 'hsl(0, 70%, 55%)' },
-  { id: '10', name: 'Stocks', type: 'investment', icon: '📈', color: 'hsl(158, 64%, 40%)' },
+  { id: '7', name: 'Entertainment', type: 'expense', icon: '🎬', color: 'hsl(280, 70%, 55%)' },
+  { id: '8', name: 'Bills', type: 'expense', icon: '📄', color: 'hsl(217, 60%, 50%)' },
+  { id: '9', name: 'Health', type: 'expense', icon: '💊', color: 'hsl(340, 70%, 55%)' },
+  { id: '10', name: 'Stocks', type: 'investment', icon: '📈', color: 'hsl(217, 91%, 50%)' },
   { id: '11', name: 'Crypto', type: 'investment', icon: '₿', color: 'hsl(38, 92%, 50%)' },
-  { id: '12', name: 'Mutual Funds', type: 'investment', icon: '📊', color: 'hsl(200, 70%, 50%)' },
+  { id: '12', name: 'Mutual Funds', type: 'investment', icon: '📊', color: 'hsl(199, 89%, 48%)' },
 ];
 
 const mockTransactions: Transaction[] = [
