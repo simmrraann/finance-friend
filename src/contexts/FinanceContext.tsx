@@ -1,0 +1,136 @@
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+export type TransactionType = 'income' | 'expense' | 'investment';
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  category: string;
+  date: string;
+  notes?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  type: TransactionType;
+  icon: string;
+  color: string;
+}
+
+interface FinanceContextType {
+  transactions: Transaction[];
+  categories: Category[];
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  deleteTransaction: (id: string) => void;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
+  addCategory: (category: Omit<Category, 'id'>) => void;
+  getTotalIncome: () => number;
+  getTotalExpenses: () => number;
+  getTotalInvestments: () => number;
+  getBalance: () => number;
+}
+
+const defaultCategories: Category[] = [
+  { id: '1', name: 'Salary', type: 'income', icon: '💼', color: 'hsl(158, 64%, 40%)' },
+  { id: '2', name: 'Freelance', type: 'income', icon: '💻', color: 'hsl(200, 70%, 50%)' },
+  { id: '3', name: 'Gifts', type: 'income', icon: '🎁', color: 'hsl(270, 60%, 55%)' },
+  { id: '4', name: 'Food & Dining', type: 'expense', icon: '🍔', color: 'hsl(12, 80%, 62%)' },
+  { id: '5', name: 'Shopping', type: 'expense', icon: '🛍️', color: 'hsl(280, 70%, 55%)' },
+  { id: '6', name: 'Transport', type: 'expense', icon: '🚗', color: 'hsl(38, 92%, 50%)' },
+  { id: '7', name: 'Entertainment', type: 'expense', icon: '🎬', color: 'hsl(340, 70%, 55%)' },
+  { id: '8', name: 'Bills', type: 'expense', icon: '📄', color: 'hsl(220, 60%, 50%)' },
+  { id: '9', name: 'Health', type: 'expense', icon: '💊', color: 'hsl(0, 70%, 55%)' },
+  { id: '10', name: 'Stocks', type: 'investment', icon: '📈', color: 'hsl(158, 64%, 40%)' },
+  { id: '11', name: 'Crypto', type: 'investment', icon: '₿', color: 'hsl(38, 92%, 50%)' },
+  { id: '12', name: 'Mutual Funds', type: 'investment', icon: '📊', color: 'hsl(200, 70%, 50%)' },
+];
+
+const mockTransactions: Transaction[] = [
+  { id: '1', type: 'income', amount: 5000, category: 'Salary', date: '2024-01-15', notes: 'Monthly salary' },
+  { id: '2', type: 'expense', amount: 120, category: 'Food & Dining', date: '2024-01-14', notes: 'Dinner with friends' },
+  { id: '3', type: 'expense', amount: 50, category: 'Transport', date: '2024-01-13', notes: 'Uber rides' },
+  { id: '4', type: 'investment', amount: 500, category: 'Stocks', date: '2024-01-12', notes: 'AAPL shares' },
+  { id: '5', type: 'expense', amount: 200, category: 'Shopping', date: '2024-01-11', notes: 'New headphones' },
+  { id: '6', type: 'income', amount: 800, category: 'Freelance', date: '2024-01-10', notes: 'Design project' },
+  { id: '7', type: 'expense', amount: 80, category: 'Entertainment', date: '2024-01-09', notes: 'Concert tickets' },
+  { id: '8', type: 'expense', amount: 150, category: 'Bills', date: '2024-01-08', notes: 'Internet bill' },
+  { id: '9', type: 'investment', amount: 300, category: 'Crypto', date: '2024-01-07', notes: 'ETH purchase' },
+  { id: '10', type: 'expense', amount: 45, category: 'Health', date: '2024-01-06', notes: 'Vitamins' },
+];
+
+const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
+
+export function FinanceProvider({ children }: { children: ReactNode }) {
+  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+
+  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+    const newTransaction = {
+      ...transaction,
+      id: Date.now().toString(),
+    };
+    setTransactions(prev => [newTransaction, ...prev]);
+  };
+
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+    setTransactions(prev =>
+      prev.map(t => (t.id === id ? { ...t, ...updates } : t))
+    );
+  };
+
+  const addCategory = (category: Omit<Category, 'id'>) => {
+    const newCategory = {
+      ...category,
+      id: Date.now().toString(),
+    };
+    setCategories(prev => [...prev, newCategory]);
+  };
+
+  const getTotalIncome = () =>
+    transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+  const getTotalExpenses = () =>
+    transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+  const getTotalInvestments = () =>
+    transactions
+      .filter(t => t.type === 'investment')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+  const getBalance = () => getTotalIncome() - getTotalExpenses() - getTotalInvestments();
+
+  return (
+    <FinanceContext.Provider value={{
+      transactions,
+      categories,
+      addTransaction,
+      deleteTransaction,
+      updateTransaction,
+      addCategory,
+      getTotalIncome,
+      getTotalExpenses,
+      getTotalInvestments,
+      getBalance,
+    }}>
+      {children}
+    </FinanceContext.Provider>
+  );
+}
+
+export function useFinance() {
+  const context = useContext(FinanceContext);
+  if (context === undefined) {
+    throw new Error('useFinance must be used within a FinanceProvider');
+  }
+  return context;
+}
