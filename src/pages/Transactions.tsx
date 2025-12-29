@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useFinance, Transaction, TransactionType } from '@/contexts/FinanceContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { formatCurrencyINR } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   TrendingUp,
@@ -105,7 +106,7 @@ export default function Transactions() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-display font-bold">FinFlow</span>
+          <span className="text-xl font-display font-bold">SimpliFy</span>
         </div>
         
         <nav className="flex-1 space-y-2">
@@ -140,7 +141,7 @@ export default function Transactions() {
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold">FinFlow</span>
+          <span className="font-display font-bold">SimpliFy</span>
         </div>
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -237,7 +238,8 @@ export default function Transactions() {
                                   ? 'text-destructive' 
                                   : 'text-chart-3'
                             }`}>
-                              {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                              {transaction.type === 'income' ? '+' : '-'}
+                              {formatCurrencyINR(transaction.amount)}
                             </span>
                             <Button
                               variant="ghost"

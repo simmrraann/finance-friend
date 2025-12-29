@@ -60,7 +60,7 @@ export default function Landing() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-display font-bold">FinFlow</span>
+            <span className="text-xl font-display font-bold">SimpliFy</span>
           </div>
           
           <div className="flex items-center gap-3">

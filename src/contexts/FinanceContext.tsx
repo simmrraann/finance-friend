@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { transactionStorage } from '@/lib/storage';
 
 export type TransactionType = 'income' | 'expense' | 'investment';
 
@@ -47,38 +49,56 @@ const defaultCategories: Category[] = [
   { id: '12', name: 'Mutual Funds', type: 'investment', icon: '📊', color: 'hsl(199, 89%, 48%)' },
 ];
 
-const mockTransactions: Transaction[] = [
-  { id: '1', type: 'income', amount: 5000, category: 'Salary', date: '2024-01-15', notes: 'Monthly salary' },
-  { id: '2', type: 'expense', amount: 120, category: 'Food & Dining', date: '2024-01-14', notes: 'Dinner with friends' },
-  { id: '3', type: 'expense', amount: 50, category: 'Transport', date: '2024-01-13', notes: 'Uber rides' },
-  { id: '4', type: 'investment', amount: 500, category: 'Stocks', date: '2024-01-12', notes: 'AAPL shares' },
-  { id: '5', type: 'expense', amount: 200, category: 'Shopping', date: '2024-01-11', notes: 'New headphones' },
-  { id: '6', type: 'income', amount: 800, category: 'Freelance', date: '2024-01-10', notes: 'Design project' },
-  { id: '7', type: 'expense', amount: 80, category: 'Entertainment', date: '2024-01-09', notes: 'Concert tickets' },
-  { id: '8', type: 'expense', amount: 150, category: 'Bills', date: '2024-01-08', notes: 'Internet bill' },
-  { id: '9', type: 'investment', amount: 300, category: 'Crypto', date: '2024-01-07', notes: 'ETH purchase' },
-  { id: '10', type: 'expense', amount: 45, category: 'Health', date: '2024-01-06', notes: 'Vitamins' },
-];
-
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
 
+  // Load transactions for current user when user changes
+  useEffect(() => {
+    if (user?.email) {
+      const userTransactions = transactionStorage.getTransactions(user.email);
+      setTransactions(userTransactions);
+    } else {
+      // Clear transactions when logged out
+      setTransactions([]);
+    }
+  }, [user?.email]);
+
+  // Persist transactions whenever they change (for current user)
+  useEffect(() => {
+    if (user?.email && transactions.length >= 0) {
+      transactionStorage.setTransactions(user.email, transactions);
+    }
+  }, [transactions, user?.email]);
+
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+    if (!user?.email) {
+      console.warn('Cannot add transaction: user not logged in');
+      return;
+    }
     const newTransaction = {
       ...transaction,
-      id: Date.now().toString(),
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
     setTransactions(prev => [newTransaction, ...prev]);
   };
 
   const deleteTransaction = (id: string) => {
+    if (!user?.email) {
+      console.warn('Cannot delete transaction: user not logged in');
+      return;
+    }
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+    if (!user?.email) {
+      console.warn('Cannot update transaction: user not logged in');
+      return;
+    }
     setTransactions(prev =>
       prev.map(t => (t.id === id ? { ...t, ...updates } : t))
     );

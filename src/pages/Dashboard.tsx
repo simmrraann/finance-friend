@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { useAuth, Character } from '@/contexts/AuthContext';
 import { useFinance, TransactionType } from '@/contexts/FinanceContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { formatCurrencyINR } from '@/lib/utils';
+import { analyzeFinancialData, generateCompanionMessage } from '@/lib/aiCompanion';
 import {
   TrendingUp,
   TrendingDown,
@@ -32,24 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const characterMessages: Record<NonNullable<Character>, { greeting: string; tip: string; weeklyInsight: string }> = {
-  spark: {
-    greeting: "You're on FIRE! 🔥",
-    tip: "Keep up the momentum! Every dollar saved is a step closer to your dreams!",
-    weeklyInsight: "Your spending is 15% lower than last week — incredible progress! You're crushing your food budget and your investments are growing. Keep this energy going!",
-  },
-  zen: {
-    greeting: "Welcome back, friend 🌿",
-    tip: "Remember, financial wellness is a journey, not a destination. Take it one day at a time.",
-    weeklyInsight: "This week has been balanced. Your expenses are steady, and you've maintained a healthy savings rate. Consider reviewing your subscriptions for potential savings.",
-  },
-  sage: {
-    greeting: "Good to see you 📊",
-    tip: "Based on your patterns, consider reviewing your entertainment spending this week.",
-    weeklyInsight: "Analysis shows income up 8% vs last week. Top spending: Food & Dining (32%), Shopping (24%). Recommendation: Set a $50 weekly cap on entertainment.",
-  },
-};
 
 const characterEmoji: Record<NonNullable<Character>, string> = {
   spark: '⚡',
@@ -80,7 +64,28 @@ export default function Dashboard() {
   });
 
   const character = user?.character || 'zen';
-  const message = characterMessages[character];
+  const firstName = (user?.username || user?.email?.split('@')[0] || 'friend').split(' ')[0];
+
+  // Generate dynamic AI companion messages based on real financial data
+  const companionMessage = useMemo(() => {
+    const analysis = analyzeFinancialData(transactions);
+    return generateCompanionMessage(analysis, character, firstName);
+  }, [transactions, character, firstName]);
+
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 5) return 'Good night';
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // If profile is incomplete, gently push user to onboarding to capture phone number for SMS
+  useEffect(() => {
+    if (user && (!user.username || !user.phoneNumber)) {
+      navigate('/onboarding');
+    }
+  }, [user, navigate]);
 
   const handleAddTransaction = () => {
     if (!newTransaction.amount || !newTransaction.category) {
@@ -118,7 +123,7 @@ export default function Dashboard() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-display font-bold">FinFlow</span>
+          <span className="text-xl font-display font-bold">SimpliFy</span>
         </div>
         
         <nav className="flex-1 space-y-2">
@@ -153,7 +158,7 @@ export default function Dashboard() {
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold">FinFlow</span>
+          <span className="font-display font-bold">SimpliFy</span>
         </div>
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -181,7 +186,7 @@ export default function Dashboard() {
           {/* Welcome Section */}
           <div className="mb-6">
             <h1 className="text-3xl font-display font-bold mb-2">
-              Hi, {user?.name?.split(' ')[0] || 'there'}! 👋
+              {getTimeGreeting()}, {firstName} 👋
             </h1>
             <p className="text-muted-foreground">Here's your financial overview</p>
           </div>
@@ -191,8 +196,8 @@ export default function Dashboard() {
             <div className="flex items-start gap-4 p-6">
               <div className="text-4xl animate-float">{characterEmoji[character]}</div>
               <div className="flex-1">
-                <p className="font-semibold mb-1">{message.greeting}</p>
-                <p className="text-muted-foreground text-sm">{message.tip}</p>
+                <p className="font-semibold mb-1">{companionMessage.greeting}</p>
+                <p className="text-muted-foreground text-sm">{companionMessage.tip}</p>
               </div>
             </div>
           </Card>
@@ -206,7 +211,7 @@ export default function Dashboard() {
                   <Wallet className="w-4 h-4 text-primary" />
                 </div>
               </div>
-              <p className="text-2xl font-display font-bold">${getBalance().toLocaleString()}</p>
+              <p className="text-2xl font-display font-bold">{formatCurrencyINR(getBalance())}</p>
               <p className="text-xs text-success flex items-center gap-1 mt-1">
                 <ArrowUpRight className="w-3 h-3" /> +12% from last month
               </p>
@@ -219,7 +224,7 @@ export default function Dashboard() {
                   <TrendingUp className="w-4 h-4 text-success" />
                 </div>
               </div>
-              <p className="text-2xl font-display font-bold">${getTotalIncome().toLocaleString()}</p>
+              <p className="text-2xl font-display font-bold">{formatCurrencyINR(getTotalIncome())}</p>
               <p className="text-xs text-muted-foreground mt-1">This month</p>
             </Card>
             
@@ -230,7 +235,7 @@ export default function Dashboard() {
                   <TrendingDown className="w-4 h-4 text-destructive" />
                 </div>
               </div>
-              <p className="text-2xl font-display font-bold">${getTotalExpenses().toLocaleString()}</p>
+              <p className="text-2xl font-display font-bold">{formatCurrencyINR(getTotalExpenses())}</p>
               <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                 <ArrowDownRight className="w-3 h-3" /> +5% from last month
               </p>
@@ -243,7 +248,7 @@ export default function Dashboard() {
                   <PiggyBank className="w-4 h-4 text-primary" />
                 </div>
               </div>
-              <p className="text-2xl font-display font-bold">${getTotalInvestments().toLocaleString()}</p>
+              <p className="text-2xl font-display font-bold">{formatCurrencyINR(getTotalInvestments())}</p>
               <p className="text-xs text-muted-foreground mt-1">Total invested</p>
             </Card>
           </div>
@@ -261,7 +266,25 @@ export default function Dashboard() {
               <div className="ml-auto text-2xl">{characterEmoji[character]}</div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-foreground leading-relaxed">{message.weeklyInsight}</p>
+              <p className="text-sm text-foreground leading-relaxed">{companionMessage.weeklyInsight}</p>
+              {companionMessage.tags.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {companionMessage.tags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        tag === 'Overspending' || tag === 'Needs attention'
+                          ? 'bg-destructive/10 text-destructive'
+                          : tag === 'Strong savings' || tag === 'Trending up'
+                          ? 'bg-success/10 text-success'
+                          : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -296,7 +319,8 @@ export default function Dashboard() {
                             ? 'text-destructive' 
                             : 'text-primary'
                       }`}>
-                        {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                        {transaction.type === 'income' ? '+' : '-'}
+                        {formatCurrencyINR(transaction.amount)}
                       </span>
                     </div>
                   );

@@ -7,10 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, Mail, Lock, User, Phone, ArrowLeft, Moon, Sun, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizePhone } from '@/lib/phone';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { login, signup, loginWithGoogle } = useAuth();
   const { theme, toggleTheme } = useTheme();
   
   const [isLogin, setIsLogin] = useState(true);
@@ -18,9 +19,9 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
-    mobile: '',
+    phoneNumber: '',
     password: '',
   });
 
@@ -30,16 +31,27 @@ export default function Auth() {
     
     try {
       if (isLogin) {
-        await login(formData.email, formData.password);
+        const loggedInUser = await login(formData.email, formData.password);
         toast.success('Welcome back!');
-        navigate('/dashboard');
+        if (!loggedInUser.username || !loggedInUser.phoneNumber) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        if (!formData.name || !formData.email || !formData.mobile || !formData.password) {
+        if (!formData.username || !formData.email || !formData.phoneNumber || !formData.password) {
           toast.error('Please fill in all fields');
           setIsLoading(false);
           return;
         }
-        await signup(formData.name, formData.email, formData.mobile, formData.password);
+        const normalized = normalizePhone(formData.phoneNumber);
+        if (!normalized) {
+          toast.error('Please enter a valid phone number with country code (e.g. +91 98765 43210)');
+          setIsLoading(false);
+          return;
+        }
+
+        await signup(formData.username, formData.email, normalized, formData.password);
         toast.success('Account created successfully!');
         navigate('/character-select');
       }
@@ -51,7 +63,21 @@ export default function Auth() {
   };
 
   const handleGoogleSignIn = () => {
-    toast.info('Google sign-in will be available soon!');
+    setIsLoading(true);
+    loginWithGoogle()
+      .then((googleUser) => {
+        if (!googleUser.username || !googleUser.phoneNumber) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
+      })
+      .catch(() => {
+        toast.error('Google sign-in failed. Please try again.');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   return (
@@ -92,14 +118,14 @@ export default function Auth() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Full Name</label>
+                  <label className="text-sm font-medium">Username</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="simran.money"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                       className="pl-10"
                     />
                   </div>
@@ -122,14 +148,14 @@ export default function Auth() {
               
               {!isLogin && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Mobile Number</label>
+                  <label className="text-sm font-medium">Phone number (with country code)</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                       type="tel"
-                      placeholder="+1 234 567 8900"
-                      value={formData.mobile}
-                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                      placeholder="+91 98765 43210"
+                      value={formData.phoneNumber}
+                      onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                       className="pl-10"
                     />
                   </div>

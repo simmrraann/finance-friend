@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { formatCurrencyINR } from '@/lib/utils';
 import { useAuth, Character } from '@/contexts/AuthContext';
+import { analyzeFinancialData, generateCompanionMessage } from '@/lib/aiCompanion';
 import {
   TrendingUp,
   Moon,
@@ -43,18 +45,6 @@ const characterEmoji: Record<NonNullable<Character>, string> = {
   sage: '🦉',
 };
 
-const characterInsights: Record<NonNullable<Character>, { analysis: string }> = {
-  spark: {
-    analysis: "You're doing great! 🔥 Your spending is on track this week. Keep pushing forward — your financial discipline is paying off! Consider allocating more to your investments while you're on a roll!",
-  },
-  zen: {
-    analysis: "Take a breath and look at your progress 🌿 Your balance is growing steadily. Remember, every small step counts. Your food expenses could use a gentle review — maybe try meal prepping?",
-  },
-  sage: {
-    analysis: "Let's analyze your patterns 📊 Your income exceeds expenses by 12%. Entertainment spending increased 15% this week. Consider setting aside the difference for your emergency fund.",
-  },
-};
-
 export default function Statistics() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -65,7 +55,17 @@ export default function Statistics() {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('weekly');
 
   const character = user?.character || 'zen';
-  const insight = characterInsights[character];
+  const firstName = (user?.username || user?.email?.split('@')[0] || 'friend').split(' ')[0];
+
+  // Generate dynamic AI companion insights based on real financial data
+  const companionInsight = useMemo(() => {
+    const analysis = analyzeFinancialData(transactions);
+    const message = generateCompanionMessage(analysis, character, firstName);
+    return {
+      analysis: message.weeklyInsight,
+      tags: message.tags,
+    };
+  }, [transactions, character, firstName]);
 
   const navItems = [
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', path: '/dashboard' },
@@ -153,7 +153,7 @@ export default function Statistics() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-display font-bold">FinFlow</span>
+          <span className="text-xl font-display font-bold">SimpliFy</span>
         </div>
         
         <nav className="flex-1 space-y-2">
@@ -188,7 +188,7 @@ export default function Statistics() {
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold">FinFlow</span>
+          <span className="font-display font-bold">SimpliFy</span>
         </div>
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -244,7 +244,9 @@ export default function Statistics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Income</p>
-                  <p className="text-2xl font-display font-bold text-success">${getTotalIncome().toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-success">
+                    {formatCurrencyINR(getTotalIncome())}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
@@ -257,7 +259,9 @@ export default function Statistics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Expenses</p>
-                  <p className="text-2xl font-display font-bold text-destructive">${getTotalExpenses().toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-destructive">
+                    {formatCurrencyINR(getTotalExpenses())}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -270,7 +274,9 @@ export default function Statistics() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Investments</p>
-                  <p className="text-2xl font-display font-bold text-primary">${getTotalInvestments().toLocaleString()}</p>
+                  <p className="text-2xl font-display font-bold text-primary">
+                    {formatCurrencyINR(getTotalInvestments())}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">{getPeriodLabel()}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -354,7 +360,7 @@ export default function Statistics() {
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
                         }}
-                        formatter={(value: number) => [`$${value}`, 'Amount']}
+                        formatter={(value: number) => [formatCurrencyINR(value), 'Amount']}
                       />
                       <Legend />
                     </PieChart>
@@ -376,18 +382,27 @@ export default function Statistics() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground leading-relaxed">{insight.analysis}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
-                    Income on track
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                    Savings improved
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning">
-                    Food spending up
-                  </span>
-                </div>
+                <p className="text-foreground leading-relaxed">{companionInsight.analysis}</p>
+                {companionInsight.tags.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {companionInsight.tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          tag === 'Overspending' || tag === 'Needs attention'
+                            ? 'bg-destructive/10 text-destructive'
+                            : tag === 'Strong savings' || tag === 'Trending up'
+                            ? 'bg-success/10 text-success'
+                            : tag === 'Lifestyle inflation'
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-primary/10 text-primary'
+                        }`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -409,7 +424,7 @@ export default function Statistics() {
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
                         }}
-                        formatter={(value: number) => [`$${value}`, 'Balance']}
+                        formatter={(value: number) => [formatCurrencyINR(value), 'Balance']}
                       />
                       <Line
                         type="monotone"

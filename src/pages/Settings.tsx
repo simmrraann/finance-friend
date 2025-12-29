@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useFinance } from '@/contexts/FinanceContext';
 import { useAuth, Character } from '@/contexts/AuthContext';
 import {
   TrendingUp,
@@ -21,6 +22,8 @@ import {
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { useState } from 'react';
+import jsPDF from 'jspdf';
+import { formatCurrencyINR } from '@/lib/utils';
 
 const characters = [
   { id: 'spark' as Character, name: 'Spark', emoji: '⚡', trait: 'Motivational' },
@@ -32,6 +35,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { user, logout, selectCharacter } = useAuth();
+  const { transactions, getTotalIncome, getTotalExpenses, getTotalInvestments, getBalance } = useFinance();
   
   const [notifications, setNotifications] = useState({
     weekly: true,
@@ -46,8 +50,99 @@ export default function SettingsPage() {
     { icon: <Settings className="w-5 h-5" />, label: 'Settings', path: '/settings', active: true },
   ];
 
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCsv = () => {
+    if (!transactions.length) {
+      toast.error('No transactions to export yet.');
+      return;
+    }
+
+    const headers = ['ID', 'Type', 'Category', 'Amount', 'Date', 'Notes'];
+    const rows = transactions.map((t) => [
+      t.id,
+      t.type,
+      t.category,
+      t.amount.toString(),
+      t.date,
+      t.notes ?? '',
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const username = user?.username || 'finflow-user';
+    downloadFile(blob, `${username}-transactions.csv`);
+    toast.success('CSV exported successfully.');
+  };
+
+  const exportPdf = () => {
+    if (!transactions.length) {
+      toast.error('No transactions to export yet.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const username = user?.username || 'SimpliFy user';
+
+    doc.setFontSize(16);
+    doc.text(`SimpliFy Report for ${username}`, 14, 20);
+
+    doc.setFontSize(11);
+    const summaryStartY = 30;
+    doc.text(`Balance: ${formatCurrencyINR(getBalance())}`, 14, summaryStartY);
+    doc.text(`Total Income: ${formatCurrencyINR(getTotalIncome())}`, 14, summaryStartY + 6);
+    doc.text(`Total Expenses: ${formatCurrencyINR(getTotalExpenses())}`, 14, summaryStartY + 12);
+    doc.text(`Total Investments: ${formatCurrencyINR(getTotalInvestments())}`, 14, summaryStartY + 18);
+
+    let y = summaryStartY + 32;
+    doc.setFontSize(12);
+    doc.text('Recent Transactions', 14, y);
+    y += 6;
+    doc.setFontSize(9);
+
+    const maxRows = 30;
+    const toRender = transactions.slice(0, maxRows);
+
+    toRender.forEach((t) => {
+      const line = `${t.date} | ${t.type.toUpperCase()} | ${t.category} | ${formatCurrencyINR(t.amount)}${t.notes ? ` | ${t.notes}` : ''}`;
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(line, 14, y);
+      y += 5;
+    });
+
+    const blob = doc.output('blob');
+    const filenameBase = (user?.username || 'simplify-user').toLowerCase().replace(/\s+/g, '-');
+    downloadFile(blob, `${filenameBase}-report.pdf`);
+    toast.success('PDF exported successfully.');
+  };
+
   const handleExport = (format: 'pdf' | 'csv') => {
-    toast.success(`Exporting data as ${format.toUpperCase()}... (Demo)`);
+    try {
+      if (format === 'csv') {
+        exportCsv();
+      } else {
+        exportPdf();
+      }
+    } catch (e) {
+      toast.error('Something went wrong while exporting. Please try again.');
+      console.error(e);
+    }
   };
 
   const handleCharacterChange = (character: Character) => {
@@ -63,7 +158,7 @@ export default function SettingsPage() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-display font-bold">FinFlow</span>
+          <span className="text-xl font-display font-bold">SimpliFy</span>
         </div>
         
         <nav className="flex-1 space-y-2">
@@ -98,7 +193,7 @@ export default function SettingsPage() {
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold">FinFlow</span>
+          <span className="font-display font-bold">SimpliFy</span>
         </div>
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -146,16 +241,16 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-muted-foreground">Name</label>
-                    <p className="font-medium">{user?.name || 'Demo User'}</p>
+                    <label className="text-sm text-muted-foreground">Username</label>
+                    <p className="font-medium">{user?.username || 'Demo User'}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Email</label>
                     <p className="font-medium">{user?.email || 'demo@example.com'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Mobile</label>
-                    <p className="font-medium">{user?.mobile || '+1 234 567 8900'}</p>
+                    <label className="text-sm text-muted-foreground">Phone number (private)</label>
+                    <p className="font-medium">{user?.phoneNumber || '+1 234 567 8900'}</p>
                   </div>
                 </div>
               </CardContent>
