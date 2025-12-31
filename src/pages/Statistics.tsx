@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFinance } from '@/contexts/FinanceContext';
@@ -67,9 +67,11 @@ export default function Statistics() {
     };
   }, [transactions, character, firstName]);
 
+  const location = useLocation();
+  const pathname = location.pathname;
   const navItems = [
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <BarChart3 className="w-5 h-5" />, label: 'Statistics', path: '/statistics', active: true },
+    { icon: <BarChart3 className="w-5 h-5" />, label: 'Statistics', path: '/statistics' },
     { icon: <Receipt className="w-5 h-5" />, label: 'Transactions', path: '/transactions' },
     { icon: <Settings className="w-5 h-5" />, label: 'Settings', path: '/settings' },
   ];
@@ -148,7 +150,7 @@ export default function Statistics() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden lg:flex flex-col">
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden md:flex flex-col">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
@@ -160,7 +162,7 @@ export default function Statistics() {
           {navItems.map((item) => (
             <Button
               key={item.path}
-              variant={item.active ? 'secondary' : 'ghost'}
+              variant={pathname === item.path ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-3"
               onClick={() => navigate(item.path)}
             >
@@ -183,7 +185,7 @@ export default function Statistics() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-50">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
@@ -196,22 +198,24 @@ export default function Statistics() {
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-50">
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            size="icon"
-            className={item.active ? 'text-primary' : 'text-muted-foreground'}
-            onClick={() => navigate(item.path)}
-          >
-            {item.icon}
-          </Button>
-        ))}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-50">
+        {navItems.map((item) => {
+          const isActive = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              {item.icon}
+              <span className="text-xs mt-1">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-20 lg:pt-8 pb-24 lg:pb-8 px-4 lg:px-8">
+      <main className="md:ml-64 pt-20 md:pt-8 pb-16 md:pb-8 px-4 md:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6">

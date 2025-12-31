@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,10 +47,12 @@ export default function Transactions() {
     notes: '',
   });
 
+  const location = useLocation();
+  const pathname = location.pathname;
   const navItems = [
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', path: '/dashboard' },
     { icon: <BarChart3 className="w-5 h-5" />, label: 'Statistics', path: '/statistics' },
-    { icon: <Receipt className="w-5 h-5" />, label: 'Transactions', path: '/transactions', active: true },
+    { icon: <Receipt className="w-5 h-5" />, label: 'Transactions', path: '/transactions' },
     { icon: <Settings className="w-5 h-5" />, label: 'Settings', path: '/settings' },
   ];
 
@@ -101,7 +103,7 @@ export default function Transactions() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden lg:flex flex-col">
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border p-4 hidden md:flex flex-col">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-primary-foreground" />
@@ -113,7 +115,7 @@ export default function Transactions() {
           {navItems.map((item) => (
             <Button
               key={item.path}
-              variant={item.active ? 'secondary' : 'ghost'}
+              variant={pathname === item.path ? 'secondary' : 'ghost'}
               className="w-full justify-start gap-3"
               onClick={() => navigate(item.path)}
             >
@@ -136,7 +138,7 @@ export default function Transactions() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-50">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-primary-foreground" />
@@ -149,18 +151,20 @@ export default function Transactions() {
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-50">
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            size="icon"
-            className={item.active ? 'text-primary' : 'text-muted-foreground'}
-            onClick={() => navigate(item.path)}
-          >
-            {item.icon}
-          </Button>
-        ))}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-50">
+        {navItems.map((item) => {
+          const isActive = pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              {item.icon}
+              <span className="text-xs mt-1">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {/* Main Content */}
